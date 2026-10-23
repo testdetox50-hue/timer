@@ -1,32 +1,27 @@
 # timer reviewer notes
 
 ## Architecture
-
-This is a Vite + React 18 + TypeScript application using native browser/React APIs and no runtime packages beyond React. `src/App.tsx` acts as a large application/gallery composition root, importing domain widgets from `src/components`, editors from `src/editors`, views from `src/views`, and charts from `src/charts`. Reusable primitives live in `src/ui`; the shared UI documentation describes them as components consumed by widgets rather than standalone gallery entries.
+This is a Vite React 18 + TypeScript widget gallery; `src/App.tsx` discovers widgets dynamically from `src/components`, `src/editors`, `src/dialogs`, `src/charts`, `src/filters`, `src/stats`, and `src/views`. Widgets are lazy-loaded, independently wrapped in `Suspense` and `WidgetErrorBoundary`, then filtered and paginated in the gallery shell. Shared reusable controls live under `src/ui`, while chart widgets are self-contained SVG components.
 
 ## Conventions
-
-- Use strict TypeScript: `tsconfig.json` enables `strict`, `noUnusedLocals`, `noUnusedParameters`, `isolatedModules`, and `noEmit`. New code must type-check via `npm run build`.
-- Components use named exports and commonly also provide a default export. For example, `src/charts/AccountChart.tsx` exports both `AccountChart` and `default AccountChart`.
-- Domain-specific files follow a predictable naming scheme: `OrderCard`, `OrderEditor`, `OrderGrid`, and corresponding files under `src/components`, `src/editors`, and `src/views` (`src/App.tsx`).
-- Chart modules expose domain-specific point interfaces, mode unions, props, and deterministic generators. For example, `src/charts/AccountChart.tsx` defines `AccountPoint`, `AccountChartMode`, `AccountChartProps`, and `generateAccountSeries`.
-- Charts use React state for display mode and hover state, `useMemo` for derived series/path/max values, and native inline SVG (`src/charts/AccountChart.tsx`, `src/charts/AlbumChart.tsx`).
-- Shared UI controls are intended to be controlled by the consuming widget. Keep state outside `SearchInput`, `TextField`, pagination, toggles, and similar primitives (`src/ui/README.md`).
-- Use native semantics and attributes supplied by shared components. Buttons default to `type="button"`; set `type="submit"` explicitly when submitting a form (`src/ui/README.md`).
-- Select option values and definition-list item IDs must be unique; status badges must include wording rather than relying only on color (`src/ui/README.md`).
-- Import local modules with relative paths, including shared UI imports such as `../ui` (`src/ui/README.md`).
+- Use strict TypeScript and satisfy the compiler’s `noUnusedLocals`/`noUnusedParameters` rules; `tsconfig.json` enables `strict`, `isolatedModules`, and `noEmit`.
+- Gallery-discovered widgets must be `.tsx` files in one of the globbed directories and must export a default React component; otherwise `src/App.tsx` throws `does not export a default component`.
+- Components commonly provide both named exports for types/helpers and a default component export, as in `src/charts/AccountChart.tsx` (`AccountPoint`, `AccountChartProps`, `generateAccountSeries`, and `default AccountChart`).
+- Chart APIs use typed `{ label, value }` point records, optional `title`, `data`, `width`, and `height`, and a `"bar" | "line"` mode. `AccountChart.tsx` and the other chart files are the representative pattern.
+- Prefer React hooks for derived values and local interaction state: charts use `useMemo` for series, maxima, and SVG paths, and `useState` for mode and hover state.
+- Buttons explicitly use `type="button"` unless they are intended to submit a form. This is required by the shared UI guidance in `src/ui/README.md`.
+- Shared UI components should be imported from `src/ui` with a relative path and reused rather than replaced with new one-off controls; controlled component state remains in the consuming widget (`src/ui/README.md`).
+- Accessibility is part of the existing pattern: labels are connected with `htmlFor`, loading uses `role="status"`, widget failures use `role="alert"`, and charts expose `role="img"` with `aria-label` (`src/App.tsx`, `src/charts/AccountChart.tsx`).
+- Run `npm run build`; it performs TypeScript checking followed by `vite build` (`package.json`, `src/ui/README.md`).
 
 ## Intentional non-standard choices
-
-- The repository contains many highly repetitive, domain-specific components and charts rather than consolidating them into generic components. This appears to be deliberate gallery/widget coverage; do not flag duplication alone (`src/App.tsx`, `src/charts/AccountChart.tsx`, `src/charts/AlbumChart.tsx`).
-- Chart sample data is generated locally with a deterministic seeded formula instead of randomness or a data library (`src/charts/AccountChart.tsx`).
-- Charts use inline SVG and hard-coded presentation colors, with no charting dependency or stylesheet requirement (`src/charts/AccountChart.tsx`, `src/ui/README.md`).
-- `src/App.tsx` intentionally has a very large import/composition surface because it registers the application’s many widgets, editors, views, and charts.
+- Chart implementations are deliberately duplicated across many domain-named files (`src/charts/AccountChart.tsx`, `AlbumChart.tsx`, `AlertChart.tsx`, etc.) rather than sharing a generic chart component. Preserve each widget’s distinct type names, seed, default point count, CSS class, and initial mode.
+- The app intentionally uses inline styles in `src/App.tsx`; the repository has no styling dependency or stylesheet requirement.
+- Chart demo data is deterministic pseudo-random data generated locally, not runtime-random or fetched from an API.
 
 ## Watch out for
-
-- Preserve controlled-component behavior: do not add internal state that conflicts with the consuming widget’s `value`/`onChange` contract (`src/ui/README.md`).
-- Flag missing accessible labels, headings, status wording, or form associations when adding UI. Hover-only chart details in `src/charts/*.tsx` should not become the sole way to access data.
-- Check chart geometry when changing `width`, `height`, or data handling: calculations assume usable dimensions and use labels as SVG keys (`src/charts/AccountChart.tsx`).
-- Flag accidental nondeterminism or changing generator seeds, since chart fixtures currently produce stable output (`src/charts/AccountChart.tsx`, `src/charts/AlbumChart.tsx`).
-- Avoid introducing dependencies or stylesheets for shared UI without a clear architectural reason; the documented component set requires neither (`src/ui/README.md`).
+- Do not add a gallery widget without a default export, or place it outside the directories listed in `src/App.tsx`; it will not be discovered or will fail at render time.
+- Preserve stable keys for repeated chart marks and UI items. Chart marks currently use `p.label`; shared UI guidance requires unique select values and definition-list item IDs.
+- Check chart changes with empty or unusually small `data`, and with dimensions below the default: `src/charts/*Chart.tsx` calculates geometry directly from `width`, `height`, and `series`.
+- Avoid making hover-only chart information the sole way to understand values; the current SVG exposes an accessible label but point details appear only on mouse hover.
+- Keep pagination synchronized with filtering: `App.tsx` resets to page 1 when `query` changes and clamps the displayed page to `pageCount`.
