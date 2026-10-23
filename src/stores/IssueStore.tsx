@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 
 export interface IssueEntity {
   id: string;
@@ -67,9 +67,18 @@ export function useIssueStore(): IssueStoreValue {
 
 function IssueStoreList() {
   const { entities, selectedId, select, upsert, remove, toggleFavorite, favorites } = useIssueStore();
+  const nextId = useRef(entities.reduce((max, entity) => {
+    const match = /^issue-(\d+)$/.exec(entity.id);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0) + 1);
   const add = () => {
-    const id = `issue-${entities.length + 1}`;
-    upsert({ id, name: `Issue ${entities.length + 1}`, favorite: false });
+    let id = `issue-${nextId.current}`;
+    while (entities.some((entity) => entity.id === id)) {
+      nextId.current += 1;
+      id = `issue-${nextId.current}`;
+    }
+    nextId.current += 1;
+    upsert({ id, name: `Issue ${id.slice("issue-".length)}`, favorite: false });
   };
   return (
     <div>

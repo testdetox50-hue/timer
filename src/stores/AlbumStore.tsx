@@ -3,7 +3,14 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 export interface AlbumEntity {
   id: string;
   name: string;
-void;
+  favorite: boolean;
+  updatedAt: number;
+}
+
+export interface AlbumStoreValue {
+  entities: AlbumEntity[];
+  selectedId: string | null;
+  select: (id: string | null) => void;
   upsert: (entity: Omit<AlbumEntity, "updatedAt">) => void;
   remove: (id: string) => void;
   toggleFavorite: (id: string) => void;

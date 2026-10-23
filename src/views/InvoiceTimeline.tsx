@@ -73,14 +73,14 @@ export function InvoiceTimeline({ title = "Invoice Timeline", rows, pageSize = 4
       <table>
         <thead>
           <tr>
-            <th onClick={() => toggleSort("label")}>Label{arrow("label")}</th>
-            <th onClick={() => toggleSort("amount")}>Amount{arrow("amount")}</th>
-            <th onClick={() => toggleSort("createdAt")}>Created{arrow("createdAt")}</th>
+            <th scope="col"><button type="button" onClick={() => toggleSort("label")}>Label{arrow("label")}</button></th>
+            <th scope="col"><button type="button" onClick={() => toggleSort("amount")}>Amount{arrow("amount")}</button></th>
+            <th scope="col"><button type="button" onClick={() => toggleSort("createdAt")}>Created{arrow("createdAt")}</button></th>
           </tr>
         </thead>
         <tbody>
           {pageRows.map((row) => (
-            <tr key={row.id} onClick={() => onRowClick?.(row)}>
+            <tr key={row.id} onClick={() => onRowClick?.(row)} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && onRowClick) { event.preventDefault(); onRowClick(row); } }} tabIndex={onRowClick ? 0 : undefined}>
               <td>{row.label}</td>
               <td>{row.amount.toLocaleString()}</td>
               <td>{row.createdAt}</td>

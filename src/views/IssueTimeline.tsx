@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 
 export interface IssueRow {
   id: number;
@@ -52,15 +52,18 @@ export function IssueTimeline({ title = "Issue Timeline", rows, pageSize = 4, on
   const maxAmount = useMemo(() => filtered.reduce((m, r) => Math.max(m, r.amount), 0), [filtered]);
 
   const toggleSort = (key: IssueSortKey) => {
-    if (key === sortKey) {
-      setDirection((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setDirection("asc");
-    }
+    if (key === sortKey) setDirection((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setDirection("asc"); }
     setPage(0);
   };
-  const arrow = (key: IssueSortKey) => (key === sortKey ? (direction === "asc" ? " ↑" : " ↓") : "");
+  const arrow = (key: IssueSortKey) => key === sortKey ? (direction === "asc" ? " ↑" : " ↓") : "";
+  const sortDirection = (key: IssueSortKey) => key === sortKey ? (direction === "asc" ? "ascending" : "descending") : "none";
+  const activateRow = (row: IssueRow, event: KeyboardEvent<HTMLTableRowElement>) => {
+    if ((event.key === "Enter" || event.key === " ") && onRowClick) {
+      event.preventDefault();
+      onRowClick(row);
+    }
+  };
 
   return (
     <section className="issue-timeline" aria-label={title}>
@@ -73,14 +76,14 @@ export function IssueTimeline({ title = "Issue Timeline", rows, pageSize = 4, on
       <table>
         <thead>
           <tr>
-            <th onClick={() => toggleSort("label")}>Label{arrow("label")}</th>
-            <th onClick={() => toggleSort("amount")}>Amount{arrow("amount")}</th>
-            <th onClick={() => toggleSort("createdAt")}>Created{arrow("createdAt")}</th>
+            <th scope="col" aria-sort={sortDirection("label")}><button type="button" onClick={() => toggleSort("label")} aria-label={`Sort by label${arrow("label")}`}>Label{arrow("label")}</button></th>
+            <th scope="col" aria-sort={sortDirection("amount")}><button type="button" onClick={() => toggleSort("amount")} aria-label={`Sort by amount${arrow("amount")}`}>Amount{arrow("amount")}</button></th>
+            <th scope="col" aria-sort={sortDirection("createdAt")}><button type="button" onClick={() => toggleSort("createdAt")} aria-label={`Sort by created date${arrow("createdAt")}`}>Created{arrow("createdAt")}</button></th>
           </tr>
         </thead>
         <tbody>
           {pageRows.map((row) => (
-            <tr key={row.id} onClick={() => onRowClick?.(row)}>
+            <tr key={row.id} onClick={() => onRowClick?.(row)} onKeyDown={(event) => activateRow(row, event)} tabIndex={onRowClick ? 0 : undefined}>
               <td>{row.label}</td>
               <td>{row.amount.toLocaleString()}</td>
               <td>{row.createdAt}</td>
